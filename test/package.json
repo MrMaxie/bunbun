@@ -1,0 +1,36 @@
+{
+  "name": "bunbun",
+  "version": "1.0.0",
+  "description": "Node.JS based simple, lightweight task bunner... I mean runner\\*",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild --bundle ./src/index.tsx --outfile=./build/main.js --sourcemap --minify",
+    "serve": "serve -l 80 ./build/ --single"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MrMaxie/bunbun.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MrMaxie/bunbun/issues"
+  },
+  "homepage": "https://github.com/MrMaxie/bunbun#readme",
+  "dependencies": {
+    "esbuild": "0.8.0",
+    "hasha": "5.2.2",
+    "mobx": "6.0.1",
+    "mobx-react": "7.0.0",
+    "react": "16.8.0",
+    "react-dom": "16.8.0",
+    "serve": "11.3.2",
+    "typescript": "4.0.5"
+  },
+  "devDependencies": {
+    "@types/react": "16.8.0",
+    "@types/react-dom": "16.8.0",
+    "node-sass": "4.14.1"
+  }
+}

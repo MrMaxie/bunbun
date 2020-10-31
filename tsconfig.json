@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "CommonJS",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "importHelpers": false,
+    "strict": true,
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "files": ["main.ts"]
+}

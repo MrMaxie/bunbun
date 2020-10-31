@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "amd",
+    "allowJs": true,
+    "checkJs": true,
+    "jsx": "react",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    "outFile": "./build/main.js",
+    "rootDir": "./",
+    "composite": false,
+    "importHelpers": false,
+    "isolatedModules": false,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictFunctionTypes": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "files": ["./src/index.tsx"]
+}

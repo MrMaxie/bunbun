@@ -1,0 +1,12 @@
+{
+	"version": 3,
+	"file": "index.css",
+	"sources": [
+		"src/index.scss"
+	],
+	"sourcesContent": [
+		"body {\r\n    background-color: red;\r\n\r\n    .test {\r\n        color: blue;\r\n        font-size: 150px;\r\n    }\r\n}"
+	],
+	"names": [],
+	"mappings": "AAAA,AAAA,IAAI,AAAC,CACD,gBAAgB,CAAE,GAAG,CAMxB,AAPD,AAGI,IAHA,CAGA,KAAK,AAAC,CACF,KAAK,CAAE,IAAI,CACX,SAAS,CAAE,KAAK,CACnB"
+}
