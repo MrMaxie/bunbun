@@ -23,9 +23,10 @@ const mime_types_1 = require("mime-types");
 const hasha_1 = __importDefault(require("hasha"));
 const fast_glob_1 = __importDefault(require("fast-glob"));
 const cpy_1 = __importDefault(require("cpy"));
+const child_process_1 = require("child_process");
 const fsStat = util_1.default.promisify(fs_1.default.lstat);
 const fsRead = util_1.default.promisify(fs_1.default.readFile);
-class BunbunServer {
+class BunbunHttpServer {
     constructor(_$, _options) {
         this._$ = _$;
         this._http = new koa_1.default();
@@ -49,10 +50,10 @@ class BunbunServer {
         }));
         this._http.use((ctx) => __awaiter(this, void 0, void 0, function* () {
             let file = path_1.default.resolve(dir, path_1.default.join('.', ctx.path));
-            if (!(yield _$.fileExists(file))) {
+            if ((yield _$.exists(file)) !== 'file') {
                 file = path_1.default.resolve(dir, fallback);
             }
-            if (!(yield _$.fileExists(file))) {
+            if ((yield _$.exists(file)) !== 'file') {
                 return ctx.throw(404, `cannot find file: ${ctx.path}`);
             }
             const isHtml = ['.htm', '.html'].includes(path_1.default.extname(file).toLowerCase());
@@ -163,7 +164,7 @@ class Bunbun {
     }
     copy(source, target) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!(yield this.fileExists(source))) {
+            if ((yield this.exists(source)) !== 'file') {
                 this.error('Cannot find %s file to copy', source);
                 throw false;
             }
@@ -183,7 +184,7 @@ class Bunbun {
     }
     tryCopy(source, target, silent = false) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!(yield this.fileExists(source))) {
+            if ((yield this.exists(source)) !== 'file') {
                 if (!silent) {
                     this.error('Cannot find %s file to copy', source);
                 }
@@ -221,6 +222,43 @@ class Bunbun {
                     }
                     return false;
                 }
+            }
+        });
+    }
+    exec(command, opts = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((res, rej) => {
+                child_process_1.exec(command, {
+                    encoding: 'buffer',
+                    cwd: opts.cwd || process.cwd(),
+                    env: Object.assign({}, process.env, opts.env || {}),
+                    timeout: opts.timeout,
+                    maxBuffer: opts.maxBuffer,
+                }, (err, stdout, stderr) => {
+                    if (err) {
+                        rej(err);
+                        return;
+                    }
+                    res({ stdout, stderr });
+                });
+            });
+        });
+    }
+    tryExec(command, silent = false, opts = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const res = yield this.exec(command, opts);
+                return res;
+            }
+            catch (e) {
+                if (!silent) {
+                    this.error('Fail at exec %s, reason:', command);
+                    console.error(e);
+                }
+                return {
+                    stdout: Buffer.from(''),
+                    stderr: Buffer.from(''),
+                };
             }
         });
     }
@@ -263,41 +301,19 @@ class Bunbun {
             return promise;
         };
     }
-    fileExists(path) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const s = yield fsStat(path);
-                return !s.isDirectory() && s.isFile();
-            }
-            catch (e) {
-                return false;
-            }
-        });
-    }
-    dirExists(path) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const s = yield fsStat(path);
-                return s.isDirectory();
-            }
-            catch (e) {
-                return false;
-            }
-        });
-    }
     exists(path) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                yield fsStat(path);
+                const s = yield fsStat(path);
+                return s.isDirectory() ? 'dir' : 'file';
             }
             catch (e) {
                 return false;
             }
-            return true;
         });
     }
     serve(directory, port, options = {}) {
-        return new BunbunServer(this, Object.assign({}, options, {
+        return new BunbunHttpServer(this, Object.assign({}, options, {
             directory,
             port,
         }));

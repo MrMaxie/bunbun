@@ -9,11 +9,21 @@ import { lookup } from 'mime-types';
 import hasha from 'hasha';
 import fg from 'fast-glob';
 import cpy from 'cpy';
+import { exec } from 'child_process';
 
 const fsStat = util.promisify(fs.lstat);
 const fsRead = util.promisify(fs.readFile);
 
-type BunbunServerOptions = {
+type BunbunExecOptions = {
+    cwd?: string;
+    env?: {
+        [name: string]: string;
+    };
+    timeout?: number;
+    maxBuffer?: number;
+};
+
+type BunbunHttpServerOptions = {
     directory: string;
     port: number;
     fallback?: string;
@@ -21,12 +31,12 @@ type BunbunServerOptions = {
     reloadPort?: number;
 };
 
-class BunbunServer {
+class BunbunHttpServer {
     private _http = new Koa();
 
     private _ws: WebSockets.Server | undefined;
 
-    private _options: Required<BunbunServerOptions> = {
+    private _options: Required<BunbunHttpServerOptions> = {
         directory: './build',
         fallback: './index.html',
         reload: true,
@@ -36,7 +46,7 @@ class BunbunServer {
 
     constructor(
         private _$: Bunbun,
-        _options: BunbunServerOptions,
+        _options: BunbunHttpServerOptions,
     ) {
         this._options = Object.assign({}, this._options, _options);
 
@@ -56,11 +66,11 @@ class BunbunServer {
         this._http.use(async ctx => {
             let file = path.resolve(dir, path.join('.', ctx.path));
 
-            if (!(await _$.fileExists(file))) {
+            if ((await _$.exists(file)) !== 'file') {
                 file = path.resolve(dir, fallback);
             }
 
-            if (!(await _$.fileExists(file))) {
+            if ((await _$.exists(file)) !== 'file') {
                 return ctx.throw(404, `cannot find file: ${ctx.path}`);
             }
 
@@ -176,7 +186,7 @@ class Bunbun {
     }
 
     async copy(source: string, target: string) {
-        if (!(await this.fileExists(source))) {
+        if ((await this.exists(source)) !== 'file') {
             this.error('Cannot find %s file to copy', source);
             throw false;
         }
@@ -197,7 +207,7 @@ class Bunbun {
     }
 
     async tryCopy(source: string, target: string, silent = false) {
-        if (!(await this.fileExists(source))) {
+        if ((await this.exists(source)) !== 'file') {
             if (!silent) {
                 this.error('Cannot find %s file to copy', source);
             }
@@ -232,6 +242,48 @@ class Bunbun {
             return false;
         }
     }}
+
+    async exec(command: string, opts: BunbunExecOptions = {}): Promise<{
+        stdout: Buffer;
+        stderr: Buffer;
+    }> {
+        return new Promise((res, rej) => {
+            exec(command, {
+                encoding: 'buffer',
+                cwd: opts.cwd || process.cwd(),
+                env: Object.assign({}, process.env, opts.env || {}),
+                timeout: opts.timeout,
+                maxBuffer: opts.maxBuffer,
+            }, (err, stdout, stderr) => {
+                if (err) {
+                    rej(err);
+                    return;
+                }
+
+                res({ stdout, stderr });
+            });
+        });
+    }
+
+    async tryExec(command: string, silent = false, opts: BunbunExecOptions = {}): Promise<{
+        stdout: Buffer;
+        stderr: Buffer;
+    }> {
+        try {
+            const res = await this.exec(command, opts);
+            return res;
+        } catch (e) {
+            if (!silent) {
+                this.error('Fail at exec %s, reason:', command);
+                console.error(e);
+            }
+
+            return {
+                stdout: Buffer.from(''),
+                stderr: Buffer.from(''),
+            }
+        }
+    }
 
     async glob(target: string | string[], opts?: Parameters<typeof fg>[1]) {
         const files = await fg(target, opts);
@@ -275,39 +327,21 @@ class Bunbun {
         }
     }
 
-    async fileExists(path: string) {
-        try {
-            const s = await fsStat(path);
-            return !s.isDirectory() && s.isFile();
-        } catch (e) {
-            return false;
-        }
-    }
-
-    async dirExists(path: string) {
-        try {
-            const s = await fsStat(path);
-            return s.isDirectory();
-        } catch (e) {
-            return false;
-        }
-    }
-
     async exists(path: string) {
         try {
-            await fsStat(path);
+            const s = await fsStat(path);
+            return s.isDirectory() ? 'dir' : 'file';
         } catch (e) {
             return false;
         }
-        return true;
     }
 
     serve(
         directory: string,
         port: number,
-        options: Omit<BunbunServerOptions, 'directory' | 'port'> = {},
+        options: Omit<BunbunHttpServerOptions, 'directory' | 'port'> = {},
     ) {
-        return new BunbunServer(this, Object.assign({}, options, {
+        return new BunbunHttpServer(this, Object.assign({}, options, {
             directory,
             port,
         }));

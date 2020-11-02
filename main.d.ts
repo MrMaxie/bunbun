@@ -3,19 +3,27 @@ import chokidar from 'chokidar';
 import hasha from 'hasha';
 import fg from 'fast-glob';
 import cpy from 'cpy';
-declare type BunbunServerOptions = {
+declare type BunbunExecOptions = {
+    cwd?: string;
+    env?: {
+        [name: string]: string;
+    };
+    timeout?: number;
+    maxBuffer?: number;
+};
+declare type BunbunHttpServerOptions = {
     directory: string;
     port: number;
     fallback?: string;
     reload?: boolean;
     reloadPort?: number;
 };
-declare class BunbunServer {
+declare class BunbunHttpServer {
     private _$;
     private _http;
     private _ws;
     private _options;
-    constructor(_$: Bunbun, _options: BunbunServerOptions);
+    constructor(_$: Bunbun, _options: BunbunHttpServerOptions);
     reload(): void;
 }
 declare class Bunbun {
@@ -34,13 +42,19 @@ declare class Bunbun {
     tryCopy(source: string, target: string, silent?: boolean): Promise<boolean>;
     globCopy(source: string | string[], target: string, opts?: cpy.Options): Promise<void>;
     tryGlobCopy(source: string | string[], target: string, silent: boolean | undefined, opts: cpy.Options): Promise<boolean>;
+    exec(command: string, opts?: BunbunExecOptions): Promise<{
+        stdout: Buffer;
+        stderr: Buffer;
+    }>;
+    tryExec(command: string, silent?: boolean, opts?: BunbunExecOptions): Promise<{
+        stdout: Buffer;
+        stderr: Buffer;
+    }>;
     glob(target: string | string[], opts?: Parameters<typeof fg>[1]): Promise<string[]>;
     watch(target: string | string[], fn: () => unknown, opts?: chokidar.WatchOptions): void;
     debounce(fn: () => unknown | PromiseLike<unknown>): () => Promise<unknown>;
-    fileExists(path: string): Promise<boolean>;
-    dirExists(path: string): Promise<boolean>;
-    exists(path: string): Promise<boolean>;
-    serve(directory: string, port: number, options?: Omit<BunbunServerOptions, 'directory' | 'port'>): BunbunServer;
+    exists(path: string): Promise<false | "dir" | "file">;
+    serve(directory: string, port: number, options?: Omit<BunbunHttpServerOptions, 'directory' | 'port'>): BunbunHttpServer;
     run(name: string): void | Promise<unknown>;
     log(text: string, ...params: any[]): void;
     error(text: string, ...params: any[]): void;
