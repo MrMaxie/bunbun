@@ -30,6 +30,7 @@ declare class Bunbun {
     private _tasks;
     hashFile(file: string, opts: hasha.Options<hasha.ToStringEncoding>): Promise<string>;
     hash(text: string, opts: hasha.Options<hasha.ToStringEncoding>): Promise<string>;
+    wait(ms: number): Promise<void>;
     task(name: string, fn: () => void): void;
     task(name: string, fn: () => PromiseLike<unknown>): void;
     task(name: string, fn: () => unknown): void;

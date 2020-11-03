@@ -131,6 +131,14 @@ class Bunbun {
         return r;
     }
 
+    async wait(ms: number): Promise<void> {
+        return new Promise(res => {
+            setTimeout(() => {
+                res();
+            }, ms);
+        });
+    }
+
     task(name: string, fn: () => void): void;
     task(name: string, fn: () => PromiseLike<unknown>): void;
     task(name: string, fn: () => unknown): void;

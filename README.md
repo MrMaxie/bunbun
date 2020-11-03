@@ -30,6 +30,14 @@ Simplest way is just using npm:
 npm install --save-exact --save-dev bunbun
 ```
 
+## Plans
+
+- [x] filesystem API
+  - [x] simple methods
+  - [ ] covering whole fs/fse
+- [ ] tasks sharing?
+- [ ] tasks context?
+
 ## Real example
 
 <details>
@@ -160,6 +168,7 @@ $.run(process.argv[2] || 'build');
     - [debounce](#-debounce) - debounce function to prevent too fast calling
     - [serve](#-serve) - serve directory as http server; create **BunbunHttpServer**
     - ([try-](#-tryexec)) [exec](#-exec) - execute command
+    - [wait](#-wait) - async timeout
   - logging
     - [log](#-log) - almost colorized version of `console.log()`
     - [error](#-error) - same as [log](#-log) but with different color
@@ -744,6 +753,30 @@ $.task('try-exec', () => {
     const { stdout, stderr } = await $.tryExec('echo test');
     // this place will be always reachable, at least stdout/stderr will be empty string
     console.log(stdout, stderr);
+});
+
+```
+</details>
+
+### » wait
+
+Async timeout
+
+```typescript
+wait(ms: number): Promise<void>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+$.task('waiting', async () => {
+    await longAction();
+    await $.wait(3000);
+    // you reach this place after longAction + 3s of waiting
+    await nextLongAction();
 });
 
 ```

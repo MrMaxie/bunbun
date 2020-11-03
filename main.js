@@ -107,6 +107,15 @@ class Bunbun {
             return r;
         });
     }
+    wait(ms) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise(res => {
+                setTimeout(() => {
+                    res();
+                }, ms);
+            });
+        });
+    }
     task(name, tasksOrFn) {
         this._tasks.set(name, tasksOrFn);
     }
