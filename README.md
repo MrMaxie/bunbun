@@ -37,6 +37,7 @@ npm install --save-exact --save-dev bunbun
   - [ ] covering whole fs/fse
 - [ ] tasks sharing?
 - [ ] tasks context?
+- [ ] better tests using virtual fs?
 
 ## Real example
 
@@ -157,25 +158,30 @@ $.run(process.argv[2] || 'build');
     - [run](#-run) - run registered task
     - [task](#-task) - register new task
   - filesystem:
-    - ([try-](#-tryread)) [read](#-read) - read content of file as buffer or string
-    - ([try-](#-trywrite)) [write](#-write) - write content into file from buffer or string
+    - ([try-](#-tryread)) [read](#-read) - read content of file as string
+    - ([try-](#-trywrite)) [write](#-write) - write content into file from string
+    - ([try-](#-tryreadraw)) [readRaw](#-readraw) - read content of file as buffer
+    - ([try-](#-trywriteraw)) [writeRaw](#-writeraw) - write content into file from buffer
     - ([try-](#-trycopy)) [copy](#-copy) - just copy file
     - ([try-](#-tryglobcopy)) [globCopy](#-globcopy) - copy all files by glob from one directory into another
     - [glob](#-glob) - list files by glob pattern
     - [watch](#-watch) - observe files by glob pattern for any changes
     - [exists](#-exists) - check if file or directory exists and returns type: file or directory
+    - [tempDir](#-tempdir) - creates temporary dir and remove it after current task
+    - [tempDirClean](#-tempdirclean) - removes temp dir manually
   - utils:
     - [debounce](#-debounce) - debounce function to prevent too fast calling
     - [serve](#-serve) - serve directory as http server; create **BunbunHttpServer**
     - ([try-](#-tryexec)) [exec](#-exec) - execute command
     - [wait](#-wait) - async timeout
   - logging
+    - [debug](#-debug) - enable/disable debug mode, which allows to throw errors from `try-` methods
     - [log](#-log) - almost colorized version of `console.log()`
     - [error](#-error) - same as [log](#-log) but with different color
 - **BunbunHttpServer**
   - [reload](#-reload) - reload pages using injected script
 
-> 📝 **Note** - methods with prefix `try-` do the same thing that version without that prefix but will don't throw exception, so they can be used as optional step of task, in default all `try-` methods show error in console, but don't casue break of task, you can silence him by setting additional argument named `silent = true`
+> 📝 **Note** - methods with prefix `try-` do the same thing that version without that prefix but will don't throw exception, so they can be used as optional step of task, in default all `try-` methods don't show error in console nor casue break of task, you can read message of such error by enabling debug mode
 
 ### » run
 
@@ -259,18 +265,19 @@ $.run('qux');
 
 ### » read
 ### » tryRead
+### » readRaw
+### » tryReadRaw
 
-Reads file from given path, if reading will cause error then this method also will throw down same error. `try-` version will don't throw anything, instead of that will returns empty string
+Reads file from given path, if reading will cause error then this method also will throw down same error. `try-` version will don't throw anything, instead of that will returns empty string/buffer
 
 ```typescript
-read(file: string): Promise<Buffer | string>;
-
+read(file: string): Promise<string>;
 // or
-
-tryRead(
-    file: string,
-    silent = false, // If true then fail will don't show message
-): Promise<Buffer | string | ''>;
+tryRead(file: string): Promise<string | ''>;
+// or
+readRaw(file: string): Promise<Buffer>;
+// or
+tryReadRaw(file: string): Promise<Buffer>;
 ```
 <details>
   <summary>📚 Click to expand the sample code</summary>
@@ -317,18 +324,19 @@ $.run('try-read');
 
 ### » write
 ### » tryWrite
+### » writeRaw
+### » tryWriteRaw
 
 Write content (string or buffer) into file. If this action will cause any error then this method also will throw down same error. `try-` version will returns boolean if the writing was successful
 
 ```typescript
-write(file: string, data: string | Buffer): Promise<void>;
-
+write(file: string, data: string): Promise<void>;
 // or
-
-tryWrite(
-    file: string,
-    silent = false, // If true then fail will don't show message
-): Promise<boolean>;
+tryWrite(file: string, data: string): Promise<boolean>;
+// or
+writeRaw(file: string, data: Buffer): Promise<void>;
+// or
+tryWriteRaw(file: string, data: Buffer): Promise<boolean>;
 ```
 <details>
   <summary>📚 Click to expand the sample code</summary>
@@ -368,14 +376,8 @@ Copy file from one place to another, doesn't move that file, instead of that ope
 
 ```typescript
 copy(source: string, target: string): Promise<void>;
-
 // or
-
-tryCopy(
-    source: string,
-    target: string,
-    silent = false, // If true then fail will don't show message
-): Promise<boolean>;
+tryCopy(source: string, target: string): Promise<boolean>;
 ```
 
 <details>
@@ -418,13 +420,10 @@ globCopy(
     target: string,
     opts?: cpy.Options,
 ): Promise<void>;
-
 // or
-
 tryGlobCopy(
     source: string,
     target: string,
-    silent = false, // If true then fail will don't show message
     opts?: cpy.Options,
 ): Promise<boolean>;
 ```
@@ -494,7 +493,7 @@ List files using glob pattern
 glob(
     target: string | string[],
     opts?: fastGlob.Options,
-): Promise<void>;
+): Promise<string[]>;
 ```
 
 <details>
@@ -624,6 +623,46 @@ $.task('check-assets', async () => {
 ```
 </details>
 
+### » tempDir
+### » tempDirClean
+
+Create temporary directory and removes it after current task or manually
+
+```typescript
+tempDir(
+    cleanOnFinish = true, // if false then directory will don't disappear after task
+): Promise<string>;
+
+// temp directory can be removed manually using this method in any moment
+tempDirClean(path: string): Promise<void>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+$.task('temp-1', async () => {
+    const dir = await $.tempDir();
+    // dir exists
+    await $.wait(30 * 1000);
+
+    // dir will be removed after task
+});
+
+$.task('temp-2', async () => {
+    const dir = await $.tempDir(true);
+    // dir exists
+    await $.wait(30 * 1000);
+
+    // dir will be don't removed after task
+    await $.tempDirClean(dir);
+    // dir doesn't exists
+});
+```
+</details>
+
 ### » debounce
 
 Avoid multiple fires of given function basing on returned promise
@@ -703,35 +742,21 @@ $.task('serve', () => {
 Execute command in commandline
 
 ```typescript
-exec(
-    command: string,
-    opts?: {
-        cwd?: string; // default: current cwd
-        env?: { // list of enviroment values, default: current env
-            [name: string]: string;
-        };
-        timeout?: number; // default: 0
-        maxBuffer?: number; // default: 1024 * 1024
-    },
-): Promise<{
+type ExecOptions = {
+    cwd?: string; // default: current cwd
+    env?: { // list of enviroment values, default: current env
+        [name: string]: string;
+    };
+    timeout?: number; // default: 0
+    maxBuffer?: number; // default: 1024 * 1024
+};
+
+exec(command: string, opts?: ExecOptions): Promise<{
     stdout: Buffer;
     stderr: Buffer;
 }>;
-
 // or
-
-tryExec(
-    command: string,
-    silent = false, // If true then fail will don't show message
-    opts?: {
-        cwd?: string; // default: current cwd
-        env?: { // list of enviroment values, default: current env
-            [name: string]: string;
-        };
-        timeout?: number; // default: 0
-        maxBuffer?: number; // default: 1024 * 1024
-    },
-): Promise<{
+tryExec(command: string, opts?: ExecOptions): Promise<{
     stdout: Buffer;
     stderr: Buffer;
 }>;
@@ -789,9 +814,7 @@ Print colored message in console, all string and number variables will be colore
 
 ```typescript
 log(text: string, ...params: any[]);
-
 // or
-
 error(text: string, ...params: any[]);
 ```
 

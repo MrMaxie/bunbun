@@ -16,7 +16,6 @@ const util_1 = __importDefault(require("util"));
 const chalk_1 = __importDefault(require("chalk"));
 const chokidar_1 = __importDefault(require("chokidar"));
 const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
 const koa_1 = __importDefault(require("koa"));
 const ws_1 = __importDefault(require("ws"));
 const mime_types_1 = require("mime-types");
@@ -24,8 +23,9 @@ const hasha_1 = __importDefault(require("hasha"));
 const fast_glob_1 = __importDefault(require("fast-glob"));
 const cpy_1 = __importDefault(require("cpy"));
 const child_process_1 = require("child_process");
-const fsStat = util_1.default.promisify(fs_1.default.lstat);
-const fsRead = util_1.default.promisify(fs_1.default.readFile);
+const fs_extra_1 = __importDefault(require("fs-extra"));
+const tmp_1 = __importDefault(require("tmp"));
+const IGNORED_DEFAULT = Symbol('default');
 class BunbunHttpServer {
     constructor(_$, _options) {
         this._$ = _$;
@@ -42,7 +42,7 @@ class BunbunHttpServer {
         const fallback = path_1.default.resolve(dir, this._options.fallback);
         this._http.use((ctx, next) => __awaiter(this, void 0, void 0, function* () {
             if (ctx.path === '/__bunbun-reload.js') {
-                ctx.body = yield fsRead(path_1.default.join(__dirname, 'inject-reload.js'), 'utf8');
+                ctx.body = yield fs_extra_1.default.readFile(path_1.default.join(__dirname, 'inject-reload.js'), 'utf8');
                 ctx.body = ctx.body.replace('__PORT__', this._options.reloadPort);
                 return;
             }
@@ -59,11 +59,11 @@ class BunbunHttpServer {
             const isHtml = ['.htm', '.html'].includes(path_1.default.extname(file).toLowerCase());
             let body = '';
             if (isHtml && this._options.reload) {
-                body = yield fsRead(file, 'utf8');
+                body = yield fs_extra_1.default.readFile(file, 'utf8');
                 body = body.concat('<script src="/__bunbun-reload.js"></script>');
             }
             else {
-                body = yield fsRead(file);
+                body = yield fs_extra_1.default.readFile(file);
             }
             ctx.body = body;
             ctx.type = mime_types_1.lookup(file) || 'plain/text';
@@ -93,7 +93,25 @@ class BunbunHttpServer {
 }
 class Bunbun {
     constructor() {
+        this._debug = false;
+        this._makeTry = (promise, _default, _defaultTrue = IGNORED_DEFAULT) => {
+            return new Promise((res, rej) => {
+                promise.then(value => {
+                    res(_defaultTrue === IGNORED_DEFAULT ? value : _defaultTrue);
+                }).catch(err => {
+                    if (this._debug) {
+                        console.error(err);
+                    }
+                    res(_default);
+                });
+            });
+        };
         this._tasks = new Map();
+        this._currentTempStack = 0;
+        this._tempDirs = new Set();
+    }
+    debug(val) {
+        this._debug = val;
     }
     hashFile(file, opts) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -116,39 +134,83 @@ class Bunbun {
             });
         });
     }
-    task(name, tasksOrFn) {
-        this._tasks.set(name, tasksOrFn);
-    }
-    read(file) {
+    tempDir(cleanOnFinish = true) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Promise((res, rej) => {
-                fs_1.default.readFile(file, {
-                    encoding: 'utf8',
-                }, (err, data) => {
-                    err ? rej(err) : res(data);
+                tmp_1.default.dir((err, path, cleanup) => {
+                    if (err) {
+                        rej(err);
+                        return;
+                    }
+                    this._tempDirs.add({
+                        path,
+                        stack: this._currentTempStack,
+                        clean: cleanOnFinish,
+                        cleanup,
+                    });
+                    res(path);
                 });
             });
         });
     }
-    tryRead(file, silent = false) {
+    tempDirClean(path) {
         return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const data = yield this.read(file);
-                return data;
-            }
-            catch (e) {
-                if (!silent) {
-                    this.error('Cannot read file %s, reason:', file);
-                    console.error(e);
+            return new Promise(res => {
+                for (const e of this._tempDirs.values()) {
+                    if (e.path === path) {
+                        e.cleanup();
+                        this._tempDirs.delete(e);
+                    }
                 }
-                return '';
+                res();
+            });
+        });
+    }
+    _tempStackDown() {
+        this._currentTempStack -= 1;
+        for (const e of this._tempDirs.values()) {
+            if (e.stack > this._currentTempStack && e.clean) {
+                e.cleanup();
+                this._tempDirs.delete(e);
             }
+        }
+    }
+    _tempStackUp() {
+        this._currentTempStack += 1;
+    }
+    task(name, tasksOrFn) {
+        this._tasks.set(name, tasksOrFn);
+    }
+    remove(path) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield fs_extra_1.default.remove(path);
+        });
+    }
+    tryRemove(path) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this._makeTry(this.remove(path), true, false);
+        });
+    }
+    read(file) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((res, rej) => {
+                fs_extra_1.default.readFile(file, {
+                    encoding: 'utf8',
+                }, (err, data) => {
+                    err ? rej(err) : res(String(data));
+                });
+            });
+        });
+    }
+    tryRead(file) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this._makeTry(this.read(file), '');
         });
     }
     write(file, data) {
         return __awaiter(this, void 0, void 0, function* () {
             return new Promise((res, rej) => {
-                fs_1.default.writeFile(file, data, {
+                fs_extra_1.default.writeFile(file, data, {
                     encoding: 'utf8',
                 }, err => {
                     err ? rej(err) : res();
@@ -156,60 +218,47 @@ class Bunbun {
             });
         });
     }
-    tryWrite(file, data, silent = false) {
+    tryWrite(file, data) {
         return __awaiter(this, void 0, void 0, function* () {
-            try {
-                yield this.write(file, data);
-            }
-            catch (e) {
-                if (!silent) {
-                    this.error('Cannot write file %s, reason:', file);
-                    console.error(e);
-                }
-                return false;
-            }
-            return true;
+            return this._makeTry(this.write(file, data), true, false);
         });
     }
-    copy(source, target) {
+    readRaw(file) {
         return __awaiter(this, void 0, void 0, function* () {
-            if ((yield this.exists(source)) !== 'file') {
-                this.error('Cannot find %s file to copy', source);
-                throw false;
-            }
-            const read = fs_1.default.createReadStream(source);
-            const write = fs_1.default.createWriteStream(target);
             return new Promise((res, rej) => {
-                read.on('error', rej);
-                write.on('error', rej);
-                write.on('finish', res);
-                read.pipe(write);
-            }).catch(e => {
-                read.destroy();
-                write.end();
-                throw e;
+                fs_extra_1.default.readFile(file, (err, data) => {
+                    err ? rej(err) : res(data);
+                });
             });
         });
     }
-    tryCopy(source, target, silent = false) {
+    tryReadRaw(file) {
         return __awaiter(this, void 0, void 0, function* () {
-            if ((yield this.exists(source)) !== 'file') {
-                if (!silent) {
-                    this.error('Cannot find %s file to copy', source);
-                }
-                return false;
-            }
-            try {
-                yield this.copy(source, target);
-                return true;
-            }
-            catch (e) {
-                if (!silent) {
-                    this.error('Cannot copy %s file to %s, reason:', source, target);
-                    console.error(e);
-                }
-                return false;
-            }
+            return yield this._makeTry(this.readRaw(file), Buffer.from(''));
+        });
+    }
+    writeRaw(file, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((res, rej) => {
+                fs_extra_1.default.writeFile(file, data, err => {
+                    err ? rej(err) : res();
+                });
+            });
+        });
+    }
+    tryWriteRaw(file, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this._makeTry(this.writeRaw(file, data), true, false);
+        });
+    }
+    copy(source, target, overwrite = true) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield fs_extra_1.default.copy(source, target, { overwrite });
+        });
+    }
+    tryCopy(source, target, overwrite = true) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this._makeTry(this.copy(source, target, overwrite), true, false);
         });
     }
     globCopy(source, target, opts) {
@@ -217,20 +266,10 @@ class Bunbun {
             yield cpy_1.default(source, target, opts);
         });
     }
-    tryGlobCopy(source, target, silent = false, opts) {
+    tryGlobCopy(source, target, opts) {
         return __awaiter(this, void 0, void 0, function* () {
             {
-                try {
-                    yield cpy_1.default(source, target, opts);
-                    return true;
-                }
-                catch (e) {
-                    if (!silent) {
-                        this.error('Cannot glob-copy %s to %s, reason:', JSON.stringify(source), target);
-                        console.error(e);
-                    }
-                    return false;
-                }
+                return yield this._makeTry(this.globCopy(source, target, opts), true, false);
             }
         });
     }
@@ -253,22 +292,12 @@ class Bunbun {
             });
         });
     }
-    tryExec(command, silent = false, opts = {}) {
+    tryExec(command, opts = {}) {
         return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const res = yield this.exec(command, opts);
-                return res;
-            }
-            catch (e) {
-                if (!silent) {
-                    this.error('Fail at exec %s, reason:', command);
-                    console.error(e);
-                }
-                return {
-                    stdout: Buffer.from(''),
-                    stderr: Buffer.from(''),
-                };
-            }
+            return yield this._makeTry(this.exec(command, opts), {
+                stdout: Buffer.from(''),
+                stderr: Buffer.from(''),
+            });
         });
     }
     glob(target, opts) {
@@ -313,7 +342,7 @@ class Bunbun {
     exists(path) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const s = yield fsStat(path);
+                const s = yield fs_extra_1.default.stat(path);
                 return s.isDirectory() ? 'dir' : 'file';
             }
             catch (e) {
@@ -333,6 +362,7 @@ class Bunbun {
             this.error('Cannot find task "%s"', name);
             return;
         }
+        this._tempStackUp();
         this.log('>> %s start', name);
         let time = Date.now();
         return (Array.isArray(x)
@@ -344,6 +374,7 @@ class Bunbun {
             }
         }).finally(() => {
             this.log('>> %s done in time %ss', name, (Date.now() - time) / 1000);
+            this._tempStackDown();
         });
     }
     log(text, ...params) {

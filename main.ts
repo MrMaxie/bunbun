@@ -2,7 +2,6 @@ import util from 'util';
 import chalk, { Chalk } from 'chalk';
 import chokidar from 'chokidar';
 import path from 'path';
-import fs from 'fs';
 import Koa from 'koa';
 import WebSockets from 'ws';
 import { lookup } from 'mime-types';
@@ -10,9 +9,10 @@ import hasha from 'hasha';
 import fg from 'fast-glob';
 import cpy from 'cpy';
 import { exec } from 'child_process';
+import fse from 'fs-extra';
+import tmp from 'tmp';
 
-const fsStat = util.promisify(fs.lstat);
-const fsRead = util.promisify(fs.readFile);
+const IGNORED_DEFAULT = Symbol('default');
 
 type BunbunExecOptions = {
     cwd?: string;
@@ -55,7 +55,7 @@ class BunbunHttpServer {
 
         this._http.use(async (ctx, next) => {
             if (ctx.path === '/__bunbun-reload.js') {
-                ctx.body = await fsRead(path.join(__dirname, 'inject-reload.js'), 'utf8');
+                ctx.body = await fse.readFile(path.join(__dirname, 'inject-reload.js'), 'utf8');
                 ctx.body = ctx.body.replace('__PORT__', this._options.reloadPort);
                 return;
             }
@@ -78,10 +78,10 @@ class BunbunHttpServer {
             let body: string | Buffer = '';
 
             if (isHtml && this._options.reload) {
-                body = await fsRead(file, 'utf8');
+                body = await fse.readFile(file, 'utf8');
                 body = body.concat('<script src="/__bunbun-reload.js"></script>');
             } else {
-                body = await fsRead(file);
+                body = await fse.readFile(file);
             }
 
             ctx.body = body;
@@ -119,6 +119,29 @@ class BunbunHttpServer {
 }
 
 class Bunbun {
+    private _debug = false;
+
+    debug(val: boolean) {
+        this._debug = val;
+    }
+
+    private _makeTry = <T extends any>(
+        promise: Promise<T | any>,
+        _default: T,
+        _defaultTrue: T | typeof IGNORED_DEFAULT = IGNORED_DEFAULT,
+    ): Promise<T> => {
+        return new Promise((res, rej) => {
+            promise.then(value => {
+                res(_defaultTrue === IGNORED_DEFAULT ? value : _defaultTrue);
+            }).catch(err => {
+                if (this._debug) {
+                    console.error(err);
+                }
+                res(_default);
+            });
+        });
+    };
+
     private _tasks = new Map<string, (() => unknown) | string[]>();
 
     async hashFile(file: string, opts: hasha.Options<hasha.ToStringEncoding>) {
@@ -139,6 +162,62 @@ class Bunbun {
         });
     }
 
+    private _currentTempStack = 0;
+
+    private _tempDirs = new Set<{
+        path: string;
+        stack: number;
+        clean: boolean;
+        cleanup: () => void;
+    }>();
+
+    async tempDir(cleanOnFinish = true): Promise<string> {
+        return new Promise((res, rej) => {
+            tmp.dir((err, path, cleanup) => {
+                if (err) {
+                    rej(err);
+                    return;
+                }
+
+                this._tempDirs.add({
+                    path,
+                    stack: this._currentTempStack,
+                    clean: cleanOnFinish,
+                    cleanup,
+                });
+
+                res(path);
+            });
+        });
+    }
+
+    async tempDirClean(path: string): Promise<void> {
+        return new Promise(res => {
+            for (const e of this._tempDirs.values()) {
+                if (e.path === path) {
+                    e.cleanup()
+                    this._tempDirs.delete(e);
+                }
+            }
+            res();
+        });
+    }
+
+    private _tempStackDown() {
+        this._currentTempStack -= 1;
+
+        for (const e of this._tempDirs.values()) {
+            if (e.stack > this._currentTempStack && e.clean) {
+                e.cleanup()
+                this._tempDirs.delete(e);
+            }
+        }
+    }
+
+    private _tempStackUp() {
+        this._currentTempStack += 1;
+    }
+
     task(name: string, fn: () => void): void;
     task(name: string, fn: () => PromiseLike<unknown>): void;
     task(name: string, fn: () => unknown): void;
@@ -147,32 +226,31 @@ class Bunbun {
         this._tasks.set(name, tasksOrFn);
     }
 
-    async read(file: string): Promise<Buffer | string> {
+    async remove(path: string): Promise<void> {
+        return await fse.remove(path);
+    }
+
+    async tryRemove(path: string): Promise<boolean> {
+        return await this._makeTry<boolean>(this.remove(path), true, false);
+    }
+
+    async read(file: string): Promise<string> {
         return new Promise((res, rej) => {
-            fs.readFile(file, {
+            fse.readFile(file, {
                 encoding: 'utf8',
             }, (err, data) => {
-                err ? rej(err) : res(data);
+                err ? rej(err) : res(String(data));
             });
         });
     }
 
-    async tryRead(file: string, silent = false) {
-        try {
-            const data = await this.read(file);
-            return data;
-        } catch (e) {
-            if (!silent) {
-                this.error('Cannot read file %s, reason:', file);
-                console.error(e);
-            }
-            return '';
-        }
+    async tryRead(file: string): Promise<string> {
+        return await this._makeTry<string>(this.read(file), '');
     }
 
-    async write(file: string, data: Buffer | string) {
+    async write(file: string, data: string): Promise<void> {
         return new Promise((res, rej) => {
-            fs.writeFile(file, data, {
+            fse.writeFile(file, data, {
                 encoding: 'utf8',
             }, err => {
                 err ? rej(err) : res();
@@ -180,75 +258,48 @@ class Bunbun {
         });
     }
 
-    async tryWrite(file: string, data: Buffer | string, silent = false) {
-        try {
-            await this.write(file, data);
-        } catch (e) {
-            if (!silent) {
-                this.error('Cannot write file %s, reason:', file);
-                console.error(e);
-            }
-            return false;
-        }
-        return true;
+    async tryWrite(file: string, data: string): Promise<boolean> {
+        return this._makeTry<boolean>(this.write(file, data), true, false);
     }
 
-    async copy(source: string, target: string) {
-        if ((await this.exists(source)) !== 'file') {
-            this.error('Cannot find %s file to copy', source);
-            throw false;
-        }
-
-        const read = fs.createReadStream(source);
-        const write = fs.createWriteStream(target);
-
+    async readRaw(file: string): Promise<Buffer> {
         return new Promise((res, rej) => {
-            read.on('error', rej);
-            write.on('error', rej);
-            write.on('finish', res);
-            read.pipe(write);
-        }).catch(e => {
-            read.destroy();
-            write.end();
-            throw e;
+            fse.readFile(file, (err, data) => {
+                err ? rej(err) : res(data);
+            });
         });
     }
 
-    async tryCopy(source: string, target: string, silent = false) {
-        if ((await this.exists(source)) !== 'file') {
-            if (!silent) {
-                this.error('Cannot find %s file to copy', source);
-            }
-            return false;
-        }
-
-        try {
-            await this.copy(source, target);
-            return true;
-        } catch (e) {
-            if (!silent) {
-                this.error('Cannot copy %s file to %s, reason:', source, target);
-                console.error(e);
-            }
-            return false;
-        }
+    async tryReadRaw(file: string): Promise<Buffer> {
+        return await this._makeTry<Buffer>(this.readRaw(file), Buffer.from(''));
     }
 
-    async globCopy(source: string | string[], target: string, opts?: cpy.Options) {
+    async writeRaw(file: string, data: Buffer): Promise<void> {
+        return new Promise((res, rej) => {
+            fse.writeFile(file, data, err => {
+                err ? rej(err) : res();
+            });
+        });
+    }
+
+    async tryWriteRaw(file: string, data: Buffer): Promise<boolean> {
+        return this._makeTry<boolean>(this.writeRaw(file, data), true, false);
+    }
+
+    async copy(source: string, target: string, overwrite: boolean = true): Promise<void> {
+        await fse.copy(source, target, { overwrite });
+    }
+
+    async tryCopy(source: string, target: string, overwrite: boolean = true): Promise<boolean> {
+        return await this._makeTry<boolean>(this.copy(source, target, overwrite), true, false);
+    }
+
+    async globCopy(source: string | string[], target: string, opts?: cpy.Options): Promise<void> {
         await cpy(source, target, opts);
     }
 
-    async tryGlobCopy(source: string | string[], target: string, silent = false, opts: cpy.Options) {{
-        try {
-            await cpy(source, target, opts);
-            return true;
-        } catch (e) {
-            if (!silent) {
-                this.error('Cannot glob-copy %s to %s, reason:', JSON.stringify(source), target);
-                console.error(e);
-            }
-            return false;
-        }
+    async tryGlobCopy(source: string | string[], target: string, opts?: cpy.Options): Promise<boolean> {{
+        return await this._makeTry(this.globCopy(source, target, opts), true, false);
     }}
 
     async exec(command: string, opts: BunbunExecOptions = {}): Promise<{
@@ -273,27 +324,17 @@ class Bunbun {
         });
     }
 
-    async tryExec(command: string, silent = false, opts: BunbunExecOptions = {}): Promise<{
+    async tryExec(command: string, opts: BunbunExecOptions = {}): Promise<{
         stdout: Buffer;
         stderr: Buffer;
     }> {
-        try {
-            const res = await this.exec(command, opts);
-            return res;
-        } catch (e) {
-            if (!silent) {
-                this.error('Fail at exec %s, reason:', command);
-                console.error(e);
-            }
-
-            return {
-                stdout: Buffer.from(''),
-                stderr: Buffer.from(''),
-            }
-        }
+        return await this._makeTry(this.exec(command, opts), {
+            stdout: Buffer.from(''),
+            stderr: Buffer.from(''),
+        });
     }
 
-    async glob(target: string | string[], opts?: Parameters<typeof fg>[1]) {
+    async glob(target: string | string[], opts?: Parameters<typeof fg>[1]): Promise<string[]> {
         const files = await fg(target, opts);
         return files;
     }
@@ -337,7 +378,7 @@ class Bunbun {
 
     async exists(path: string) {
         try {
-            const s = await fsStat(path);
+            const s = await fse.stat(path);
             return s.isDirectory() ? 'dir' : 'file';
         } catch (e) {
             return false;
@@ -363,6 +404,7 @@ class Bunbun {
             return;
         }
 
+        this._tempStackUp();
         this.log('>> %s start', name);
         let time = Date.now();
 
@@ -377,6 +419,7 @@ class Bunbun {
             }
         }).finally(() => {
             this.log('>> %s done in time %ss', name, (Date.now() - time) / 1000);
+            this._tempStackDown();
         });
     }
 
