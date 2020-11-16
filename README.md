@@ -1,6 +1,6 @@
 # bunbun
 
-Node.JS based simple, lightweight task bunner... I mean runner\*
+Node.JS based simple, lightweight task bunner... I mean runner
 
 <p align="center">
   <img src="bunbun.png" />
@@ -12,15 +12,23 @@ Node.JS based simple, lightweight task bunner... I mean runner\*
 
 📐 **Ready to use** - just add to your project, create file and prepare your first task
 
-🔌 **Extendable** - you are owner of your flow, without any magic and invisible parts/configurations etc., neither no compilers included
+🔌 **Extendable** - "extends-by-code" philosophy - you are owner of your build flow, without any magic and invisible parts/configurations etc., neither no compilers included
 
-✨ **Universal** - this library contains **only** language/tool/framework agnostic tools
+✨ **Universal** - this library contains **only** language/tool/framework agnostic tools, all compilations/copying things are in your hands
+
+🎈 **Without magic** - all of your tasks are just JS code, without any configs, 3rd-party plugins etc. just plain source code, therefore the learning curve is very low
+
+🐞 **Debuggable** - debugging is very simple because none of all tasks are done invisibly underhood, it's easy to find erroring part if you see all steps of build process, also you can enable debugging mode in Bunbun to log all things
+
+🧰 **Safe versioning** - version of Bunbun will never break any of building processes because Bunbun don't conains any API for them, updating Bunbun will need from you only update your building script - it's all, you will never have to wait for a some plugin to be updated
 
 ## Requirements
 
-- Node.JS `>= 7.6v` (because of default support of async/await syntax, smaller versions force you to use `Promise.then()` syntax)
-- `NPM` (or any wrapper like `yarn`) is recommended
-- ...that's all 😊
+- `Node.JS >= 7.6v`
+    - ...because of default support of async/await syntax
+- or `Node.JS >= 10v`
+    - ...for execution and handling processes
+- `NPM`
 
 ## How to install?
 
@@ -29,15 +37,6 @@ Simplest way is just using npm:
 ```bash
 npm install --save-exact --save-dev bunbun
 ```
-
-## Plans
-
-- [x] filesystem API
-  - [x] simple methods
-  - [ ] covering whole fs/fse
-- [ ] tasks sharing?
-- [ ] tasks context?
-- [ ] better tests using virtual fs?
 
 ## Real example
 
@@ -151,44 +150,103 @@ $.run(process.argv[2] || 'build');
 </details>
 
 
-## Methods
+## Table of Contents
 
-- **Bunbun**
-  - tasks:
-    - [run](#-run) - run registered task
-    - [task](#-task) - register new task
-  - filesystem:
-    - ([try-](#-tryread)) [read](#-read) - read content of file as string
-    - ([try-](#-trywrite)) [write](#-write) - write content into file from string
-    - ([try-](#-tryreadraw)) [readRaw](#-readraw) - read content of file as buffer
-    - ([try-](#-trywriteraw)) [writeRaw](#-writeraw) - write content into file from buffer
-    - ([try-](#-trycopy)) [copy](#-copy) - just copy file
-    - ([try-](#-tryglobcopy)) [globCopy](#-globcopy) - copy all files by glob from one directory into another
-    - [glob](#-glob) - list files by glob pattern
-    - [watch](#-watch) - observe files by glob pattern for any changes
-    - [exists](#-exists) - check if file or directory exists and returns type: file or directory
-    - [tempDir](#-tempdir) - creates temporary dir and remove it after current task
-    - [tempDirClean](#-tempdirclean) - removes temp dir manually
-  - utils:
-    - [debounce](#-debounce) - debounce function to prevent too fast calling
-    - [serve](#-serve) - serve directory as http server; create **BunbunHttpServer**
-    - ([try-](#-tryexec)) [exec](#-exec) - execute command
-    - [wait](#-wait) - async timeout
-  - logging
-    - [debug](#-debug) - enable/disable debug mode, which allows to throw errors from `try-` methods
-    - [log](#-log) - almost colorized version of `console.log()`
-    - [error](#-error) - same as [log](#-log) but with different color
-- **BunbunHttpServer**
-  - [reload](#-reload) - reload pages using injected script
+- [`class Bunbun`](#class-bunbun)
+    - [`fs`](#class-bunbun--fs) - filesystem API
+    - [`logger`](#class-bunbun--logger) - logger API
+    - [`alias()`](#class-bunbun--alias) - regiser alias of multiple tasks
+    - [`debounce()`](#class-bunbun--debounce) - allows to debounce by promise and time
+    - [`exec()`](#class-bunbun--exec) - execute terminal command
+    - [`hash()`](#class-bunbun--hash) - hash given file
+    - [`rescue()`](#class-bunbun--rescue) - catch exception making result optional
+    - [`run()`](#class-bunbun--run) - run registered task
+    - [`start()`](#class-bunbun--start) - run tasks by `process.argv`
+    - [`serve()`](#class-bunbun--serve) - create new http server
+    - [`task()`](#class-bunbun--task) - register new task
+    - [`until()`](#class-bunbun--until) - waits until task has been done
+    - [`wait()`](#class-bunbun--wait) - `setTimeout` but in `await`/`async` convention
+- [`class Logger`](#class-logger)
+    - [`debugging`](#class-logger--debugging) - determine if logger have to be louder
+    - [`silent`](#class-logger--silent) - determine if logger have to log nothing
+    - [`debug()`](#class-logger--debug) - debug log
+    - [`error()`](#class-logger--error) - error log
+    - [`format()`](#class-logger--format) - prepare message before log
+    - [`log()`](#class-logger--log) - basic log
+    - [`success()`](#class-logger--success) - success log
+- [`class Fs`](#class-fs)
+    - [`cwd`](#class-fs--cwd) - current working directory
+    - [`copy()`](#class-fs--copy) - copy (also recursive and glob option) files/dirs
+    - [`createDir()`](#class-fs--createdir) - create dir
+    - [`createTempDir()`](#class-fs--createtempdir) - create unique temporary dir
+    - [`edit()`](#class-fs--edit) - reads and writes back file
+    - [`exists()`](#class-fs--exists) - check whenever file/dir exists and returns type
+    - [`hash()`](#class-fs--hash) - hash given file
+    - [`list()`](#class-fs--list) - list files/dirs
+    - [`read()`](#class-fs--read) - reads data from file
+    - [`remove()`](#class-fs--remove) - removes file/dir
+    - [`rename()`](#class-fs--rename) - renames (also moves) file/dir
+    - [`watch()`](#class-fs--watch) - watches files/dirs for changes
+    - [`write()`](#class-fs--write) - writes data into file
+- [`class HttpServer`](#class-httpserver)
+    - [`reload()`](#class-httpserver--reload) - reloads all html pages
 
-> 📝 **Note** - methods with prefix `try-` do the same thing that version without that prefix but will don't throw exception, so they can be used as optional step of task, in default all `try-` methods don't show error in console nor casue break of task, you can read message of such error by enabling debug mode
+<!------------------------------------------------------------------------------------------------------------->
 
-### » run
+<h3 id="class-bunbun"><code>class Bunbun</code></h3>
 
-Execute registered task by name
+Main class of whole script, it's also default exported thing from module
 
 ```typescript
-run(name: string): void | Promise<unknown>;
+type Options = {
+    // Determines if logger should be louder by default
+    debugging: boolean; // default: false
+
+    // Determines if logger should be silent by default
+    // this option has higher priority than `debugging`
+    silent: boolean; // default: false
+
+    // Determines if tasks should wait for previous promise by default
+    debouncePromise: boolean; // default: true
+
+    // Determines if tasks should debounce and with what time by default
+    // 0 means turn off
+    debounceTime: number; // default: 200
+
+    // Current working directory for fs/exec etc.
+    cwd: string; // default: process.cwd()
+};
+
+type Bunbun = {
+    new(options?: Partial<Options>);
+    // ...
+};
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const Bunbun = require('bunbun');
+
+// Debugging instance
+const $1 = new Bunbun({
+    debugging: true,
+});
+
+// Default instance
+const $2 = new Bunbun();
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--fs"><code>bunbun.fs</code></h3>
+
+[`Fs`](#class-fs) (filesystem) instance available for external usage
+
+```typescript
+fs: Fs;
 ```
 
 <details>
@@ -197,41 +255,47 @@ run(name: string): void | Promise<unknown>;
 ```javascript
 const $ = new Bunbun;
 
-$.task('task-1', () => {
-    console.log('task-1');
+$.fs.read('./file.txt').then(data => {
+    // ...
 });
-$.task('task-2', async () => {
-    console.log('task-2');
-    await $.run('task-1');
-});
-$.task('task-3', async () => {
-    console.log('task-3');
-    await $.run('task-2');
-});
-
-// Run task from argument or task `task-3`
-$.run(process.argv[2] || 'task-3');
-// output:
-// >> task-3
-// >> task-2
-// >> task-1
 ```
 </details>
 
-### » task
+<!------------------------------------------------------------------------------------------------------------->
 
-Register new task under given name. Task can be simple function, async function or array of names of other tasks to create alias
+<h3 id="class-bunbun--logger"><code>bunbun.logger</code></h3>
+
+[`Logger`](#class-logger) instance used by Bunbun and available for external usage as well
 
 ```typescript
-task(
-    name: string,
-    fn: () => PromiseLike<unknown> | void | unknown,
-): void;
-
-// or
-
-task(name: string, tasks: string[]): void;
+logger: Logger;
 ```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+const myVar = { test: 1 };
+
+$.logger.log('my var = $$', myVar);
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--alias"><code>bunbun.alias()</code></h3>
+
+Registers alias of tasks, those tasks will be executed asynchronously. Name of such alias will be in same pool where tasks are so you can't register task of same name which already exists
+
+```typescript
+alias(
+    name: string,
+    tasks: string[],
+): void;
+```
+
 <details>
   <summary>📚 Click to expand the sample code</summary>
 
@@ -245,10 +309,374 @@ $.task('bar', async () => {
     await someLongAction();
     console.log('bar');
 });
-$.task('baz', ['bar', 'foo']);
+
+$.alias('baz', ['bar', 'foo']);
+// is equal to
+$.task('qux', async () => {
+    return Promise.all([
+        $.run('bar'),
+        $.run('foo'),
+    ]);
+});
+
+$.run('baz'); // or $.run('qux');
+// output:
+// >> foo
+// >> bar (because it's waited for long running function)
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--debounce"><code>bunbun.debounce()</code></h3>
+
+Creates debounce function of given function, this kind of function allows you avoid multiple calls of time-critical functions, e.g:
+- To avoid overloop building process for same code
+- To avoid overwriting things at overwriting they in previous call
+
+> 💡 **Tip** - time debouncing don't call function until given timeout, promise debouncing call function and wait for fulfilling last promise
+
+```typescript
+debounce<T>(
+    fn: () => Promise<T> | T,
+    time: number = 0,
+): Promise<T>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+// Not working debounce (without promise nor time)
+let i1 = 0;
+const fnNothing = $.debounce(() => {
+    console.log('1', i1 += 1);
+});
+// Promise based debounce
+let i2 = 0;
+const fnPromise = $.debounce(() => {
+    new Promise(res => setTimeout(() => {
+        console.log('2', i2 += 1);
+        res();
+    }, 10 * 1000))
+});
+// Time based debounce
+let i3 = 0;
+const fnTime = $.debounce(() => {
+    console.log('3', i3 += 1);
+}, 10 * 1000);
+// Promise and time based debounce
+let i4 = 0;
+const fnPromiseAndTime = $.debounce(() =>
+    new Promise(res => setTimeout(() => {
+        console.log('4', i4 += 1);
+        res();
+    }, 9 * 1000))
+, 9 * 1000);
+
+// --- results ---
+
+fnNothing(); // > 1
+fnNothing(); // > 2
+fnNothing(); // > 3
+fnNothing(); // > 4
+
+fnPromise(); // > wait for promise > 1
+// after 5s
+fnPromise(); // > wait for previous result > 1
+// after 5s
+fnPromise(); // > wait for new promise > 2
+// after 10s
+fnPromise(); // > wait for new promise > 3
+
+fnTime(); // > wait for timeout > 1
+// after 5s
+fnTime(); // > wait for previous timeout > 1
+// after 5s
+fnTime(); // > wait for new timeout > 2
+// after 10s
+fnTime(); // > wait for new timeout > 3
+
+fnPromiseAndTime(); // > wait for timeout > wait for promise > 1
+// after 5s
+fnPromiseAndTime(); // > wait for previous timeout > wait for previous promise > 1
+// after 5s
+fnPromiseAndTime(); // > wait for previous promise > 1
+// after 10s
+fnPromiseAndTime(); // > wait for new timeout > wait for new promise > 2
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--exec"><code>bunbun.exec()</code></h3>
+
+Allows you to execute command in shell and wait for result
+
+> 💡 **Tip** - if timeout is equal or less than 0 then timeout will don't be turned on
+
+```typescript
+exec(
+    command: string,
+    timeout: number = 0,
+): Promise<{
+    stdout: string;
+    stderr: string;
+}>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+$.exec('node -v').then(({ stdout }) => {
+    console.log(stdout);
+});
+
+// or
+
+$.task('node-v', async () => {
+    const { stdout } = await $.exec('node -v');
+    console.log(stdout);
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--hash"><code>bunbun.hash()</code></h3>
+
+Hash given string
+
+```typescript
+hash(
+    text: string,
+    algorithm: 'md5' | 'sha1' | 'sha256' | 'sha512' = 'md5',
+    encoding: 'hex' | 'base64' | 'buffer' | 'latin1' = 'base64'
+): Promise<string>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+$.hash('test').then(hash => console.log(hash));
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--rescue"><code>bunbun.rescue()</code></h3>
+
+Allows catch promise and keep `async`/`await` syntax
+
+> 💡 **Tip** - be careful and never call (`await `)`rescue(await someFunc())` because this `someFunc()` will throw in higher, current context instead of `rescue`'s context, instead of that call `await rescue(someFunc())`
+
+> 🎈 **Fun fact** - in Ruby language `rescue` keyword is used instead of typical `catch` keyword - that's why Bunbun use this name in this context
+
+```typescript
+rescue<T1, T2>(
+    promise: Promise<T1> | T1,
+    alter?: T2,
+): Promise<T1 | T2>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+const justReject = async () => {
+    throw 'wowie, such error';
+};
+
+const dontReject = async () => 'ok!';
+
+$.task('test-1', async () => {
+    const error = await $.rescue(justReject());
+    console.log(error); // > 'wowie, such error'
+});
+
+$.task('test-2', async () => {
+    const error = await $.rescue(await justReject());
+    // unreachable code because `justReject` is executed
+    // in current context!
+});
+
+$.task('test-3', async () => {
+    const ok = await $.rescue(dontReject());
+    console.log(ok); // > 'ok!'
+});
+
+$.task('test-4', async () => {
+    const ok = await $.rescue('ok!');
+    console.log(ok); // > 'ok!'
+});
+
+$.task('test-5', async () => {
+    const alternativeValue = await $.rescue(justReject(), 'ok!');
+    console.log(alternativeValue); // > 'ok!'
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--run"><code>bunbun.run()</code></h3>
+
+Run single task by name and returns promise of call of this task
+
+> 💡 **Tip** - if task with such name will be unable to found then this function will throw `false`
+
+```typescript
+run(name: string): Promise<boolean>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+$.task('reject', async () => {
+    throw 'oh no!';
+});
+
+$.task('resolve', async () => {
+    return 'ok!';
+});
+
+$.task('test', async () => {
+    // try run task
+    await $.rescue($.run('reject'));
+    console.log(
+        await $.rescue($.run('reject')
+    ); // > 'oh no!'
+    console.log(
+        await $.rescue($.run('?')
+    ); // > false
+    console.log(
+        await $.rescue($.run('resolve')
+    ); // > true
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--start"><code>bunbun.start()</code></h3>
+
+Similar to [`bunbun.run()`](#class-bunbun--run) but instead of running single task allows run multiple tasks, with single fallback task. This function will don't throw at error (only log it)
+
+> 💡 **Tip** - this function is created mainly for using as main method
+
+```typescript
+start(
+    defaultTask: string = 'default',
+    tasks: string[] = process.argv.slice(2),
+): Promise<void>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+$.task('reject', async () => {
+    throw 'oh no!';
+});
+
+$.task('resolve', async () => {
+    return 'ok!';
+});
+
+$.start(); // run 'default' task or given names from terminal
+// or
+$.start('resolve'); // run 'resolve' task or given names from terminal
+// or
+$.start(
+    'resolve',
+    ['resolve', 'reject'],
+); // run always 'resolve' and 'reject'
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--serve"><code>bunbun.serve()</code></h3>
+
+Creates new instance of [`class HttpServer`](#class-httpserver)
+
+```typescript
+type Options = {
+    fallback: string = './index.html',,
+    reload: boolean = true,
+    reloadPort: number = 8181,
+};
+
+serve(
+    directory: string,
+    port: number,
+    options?: Partial<Options>,
+): HttpServer;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+const server = $.serve('build', 8080);
+
+// after some action you can force reload of pages
+server.reload();
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-bunbun--task"><code>bunbun.task()</code></h3>
+
+Register new task under given name. Task can be simple function or async function if needed
+
+> 💡 **Tip** - if you cannot use `async`/`await` syntax then returning `Promise` instance will give same effect
+
+```typescript
+task(
+    name: string,
+    fn: () => unknown,
+): void;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+$.task('foo', () => {
+    console.log('foo');
+});
+$.task('bar', async () => {
+    await someLongAction();
+    console.log('bar');
+});
+$.task('baz', async () => {
+    await $.run('foo');
+    await $.run('bar');
+});
 $.task('qux', async () => {
     await $.run('bar');
-    await $.run('baz');
+    await $.run('foo');,
 });
 
 $.run('baz');
@@ -263,121 +691,14 @@ $.run('qux');
 ```
 </details>
 
-### » read
-### » tryRead
-### » readRaw
-### » tryReadRaw
+<!------------------------------------------------------------------------------------------------------------->
 
-Reads file from given path, if reading will cause error then this method also will throw down same error. `try-` version will don't throw anything, instead of that will returns empty string/buffer
+<h3 id="class-bunbun--until"><code>bunbun.until()</code></h3>
 
-```typescript
-read(file: string): Promise<string>;
-// or
-tryRead(file: string): Promise<string | ''>;
-// or
-readRaw(file: string): Promise<Buffer>;
-// or
-tryReadRaw(file: string): Promise<Buffer>;
-```
-<details>
-  <summary>📚 Click to expand the sample code</summary>
-
-```javascript
-const $ = new Bunbun;
-
-// So let's assume that
-// "exists.html" file exists and
-// "doesntExists.html" file doesn't exists
-// duuuuh...
-
-$.task('read', async () => {
-    const data1 = await $.read('exists.html');
-    console.log(data1);
-
-    const data2 = await $.read('doesntExists.html');
-    console.log(data2);
-
-    console.log('bye');
-});
-$.task('try-read', async () => {
-    const data1 = await $.tryRead('exists.html', true);
-    console.log(data1);
-
-    const data2 = await $.tryRead('doesntExists.html', true);
-    console.log(data2);
-
-    console.log('bye');
-});
-
-$.run('read');
-// output:
-// >> <CONTENT_OF_FILE>
-// >> ERROR
-
-$.run('try-read');
-// output:
-// >> <CONTENT_OF_FILE>
-// >>
-// >> bye
-```
-</details>
-
-### » write
-### » tryWrite
-### » writeRaw
-### » tryWriteRaw
-
-Write content (string or buffer) into file. If this action will cause any error then this method also will throw down same error. `try-` version will returns boolean if the writing was successful
+Waits until given task has been completed, it doesn't matter if it ended successfully, throws if task has been not found
 
 ```typescript
-write(file: string, data: string): Promise<void>;
-// or
-tryWrite(file: string, data: string): Promise<boolean>;
-// or
-writeRaw(file: string, data: Buffer): Promise<void>;
-// or
-tryWriteRaw(file: string, data: Buffer): Promise<boolean>;
-```
-<details>
-  <summary>📚 Click to expand the sample code</summary>
-
-```javascript
-const $ = new Bunbun;
-
-$.task('write', async () => {
-    await $.write('./build/file.html', 'hello');
-    console.log('one done');
-    await $.write('F:/access/denied/file.html', 'hello');
-    console.log('bye');
-});
-$.task('try-write', async () => {
-    await $.tryWrite('./build/file.html', 'hello', true);
-    console.log('one done');
-    await $.tryWrite('F:/access/denied/file.html', 'hello', true);
-    console.log('bye');
-});
-
-$.run('write');
-// output:
-// >> one done
-// >> ERROR
-
-$.run('try-write');
-// output:
-// >> one done
-// >> bye
-```
-</details>
-
-### » copy
-### » tryCopy
-
-Copy file from one place to another, doesn't move that file, instead of that opens read-write buffers. `try-` version will returns boolean if the copying was successful
-
-```typescript
-copy(source: string, target: string): Promise<void>;
-// or
-tryCopy(source: string, target: string): Promise<boolean>;
+until(name: string): Promise<boolean>;
 ```
 
 <details>
@@ -386,453 +707,606 @@ tryCopy(source: string, target: string): Promise<boolean>;
 ```javascript
 const $ = new Bunbun;
 
-$.task('try-copy-logo', async () => {
-    const copied = await $.tryCopy('./src/logo.png', './build/logo.png');
-
-    // you reach this place always
-
-    if (copied) {
-        console.log('logo has been copied');
-    } else {
-        console.log('logo has not been copied, but we don\'t need it at all');
-    }
+$.task('long', async () => {
+    await $.wait(1500);
 });
-
-$.task('copy-logo', async () => {
-    $.copy('./src/logo.png', './build/logo.png');
-    console.log('logo has been copied!');
-    // you can't reach this place in code without success at copying
+$.task('run-and-wait', async () => {
+    $.run('long');
+    await $.until('long');
+    // waits until 'long' ended
+    await $.until('long');
+    // pass immediately because 'long' is not running
 });
 ```
-
 </details>
 
-### » globCopy
-### » tryGlobCopy
+<!------------------------------------------------------------------------------------------------------------->
 
-Copy files recursively using glob pattern
+<h3 id="class-bunbun--wait"><code>bunbun.wait()</code></h3>
 
-> 💕 **External config** - This method is powered by [**cpy** library](https://github.com/sindresorhus/cpy), `cpy.Options` will be provided to this library so check documentation of this library for more informations
+`setTimeout()` alternative for `async`/`await` syntax
 
 ```typescript
-globCopy(
-    source: string | string[],
-    target: string,
-    opts?: cpy.Options,
-): Promise<void>;
+wait(time: number): Promise<void>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+$.task('long', async () => {
+    console.log('wait moment');
+    await $.wait(1500);
+    console.log('hello again');
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-logger"><code>class Logger</code></h3>
+
+Class prepared for logging purposes. Logger is already constructed with [`class Bunbun`](#class-bunbun) with default settings
+
+```typescript
+type Logger = {
+    new();
+    // ...
+};
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+$.logger; // here you are
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-logger--debugging"><code>logger.debugging</code></h3>
+
+Determines if logger should log more useful data for debugging purposes
+
+```typescript
+debugging: boolean = false;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+$.logger.debugging = true;
+// Now bunbun will throw more logs
+$.logger.debugging = false;
+// Now bunbun will don't throw so much data
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-logger--silent"><code>logger.silent</code></h3>
+
+Determines if logger should be silent
+
+```typescript
+silent: boolean = false;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+$.logger.silent = true;
+// Now bunbun will be silent
+$.logger.silent = false;
+// Now bunbun will be loud
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-logger--debug"><code>logger.debug()</code></h3>
+<h3 id="class-logger--error"><code>logger.error()</code></h3>
+<h3 id="class-logger--log"><code>logger.log()</code></h3>
+<h3 id="class-logger--success"><code>logger.success()</code></h3>
+
+Using [`logger.format()`](#class-logger--format) function to colorize data, adds prefix and log given thing. Nothing will be logged if [`logger.silent`](#class-logger--silent) is true. `logger.debug()` will log things only if [`logger.debugging`](#class-logger--debugging) is true
+
+```typescript
+debug(template: string, ...args: any[]): void;
 // or
-tryGlobCopy(
+error(template: string, ...args: any[]): void;
+// or
+log(template: string, ...args: any[]): void;
+// or
+success(template: string, ...args: any[]): void;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+$.logger.debug('my var = $$', 10);
+// logs only if 'logger.debugging' is equal to 'true'
+// > '? ~ my var = 10'
+
+$.logger.error('my var = $$', 10);
+// > '✗ ~ my var = 10'
+
+$.logger.log('my var = $$', 10);
+// > '  ~ my var = 10'
+
+$.logger.success('my var = $$', 10);
+// > '✔ ~ my var = 10'
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-logger--format"><code>logger.format()</code></h3>
+
+Format given template using built-in Node's functions, but uses `$$` as placeholder for any type of variable
+
+```typescript
+format(template: string, ...args: any[]): string;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+console.log(
+    $.logger.format(
+        '1.$$\n2.$$\n3.$$',
+        10,
+        'test',
+        { test: 10 },
+    )
+);
+// > output:
+// 1.10
+// 2.'test'
+// 3.{ test: 10 }
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs"><code>class Fs</code></h3>
+
+Class prepared for filesystem manipulations or fetching data purposes. Fs is already constructed with [`class Bunbun`](#class-bunbun) with default settings
+
+```typescript
+type Fs = {
+    new();
+    // ...
+};
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+$.fs; // here you are
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--cwd"><code>fs.cwd</code></h3>
+
+Current working directory for all methods of [`class Fs`](#class-fs)
+
+```typescript
+cwd: string = process.cwd();
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+$.fs.cwd === process.cwd(); // > true
+$.fs.cwd = 'C:/src'; // now all methods starts from "C:/src"
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--copy"><code>fs.copy()</code></h3>
+
+Copy single file or whole dir (recursively), returns `true` if done without any errors, errors will be throwed as exception
+
+```typescript
+copy(
     source: string,
-    target: string,
-    opts?: cpy.Options,
-): Promise<boolean>;
+    target: string
+): Promise<true>;
 ```
 
 <details>
   <summary>📚 Click to expand the sample code</summary>
 
-So for example we want to copy files with extensions png, jpg and jpeg from `./src` directory, except `logo.png` into `./build` directory. So from such files tree:
+```typescript
+const $ = new Bunbun();
 
-```
-.
-└── src/
-    ├── images/
-    │   ├── a.png
-    │   └── b.jpg
-    ├── other/
-    │   └── c.jpeg
-    ├── d.png
-    └── logo.png
-```
+$.task('maybe-copy-file', async () => {
+    const res = await $.rescue(
+        $.fs.copy('file.txt', 'second-file.txt'),
+        false
+    );
 
-We want to copy into such tree:
-
-```
-.
-└── build/
-    ├── images/
-    │   ├── a.png
-    │   └── b.jpg
-    ├── other/
-    │   └── c.jpeg
-    └── d.png
-```
-
-So we can use code from this example:
-
-```javascript
-const $ = new Bunbun;
-
-$.task('try-copy-assets', async () => {
-    const copied = await $.tryGlobCopy(['./src/**/*.{png,jpg,jpeg}','!./src/logo.png'], './build');
-
-    // you reach this place always
-
-    if (copied) {
-        console.log('images has been copied');
+    if (res) {
+        // file has been copied
     } else {
-        console.log('images has not been copied, but we don\'t need it at all');
+        // file has NOT been copied
     }
 });
 
-$.task('copy-logo', async () => {
-    $.copy(['./src/**/*.{png,jpg,jpeg}','!./src/logo.png'], './build/logo.png');
-    console.log('images has been copied!');
-    // you can't reach this place in code without success at copying
+$.task('swallow-copy-file', async () => {
+    await $.rescue($.fs.copy('file.txt', 'second-file.txt'));
+    // nobody cares if file has been copied
+});
+
+$.task('force-copy-file', async () => {
+    await $.fs.copy('file.txt', 'second-file.txt');
+    // unreachable without successful copying file
 });
 ```
 </details>
 
-### » glob
+<!------------------------------------------------------------------------------------------------------------->
 
-List files using glob pattern
+<h3 id="class-fs--createdir"><code>fs.createDir()</code></h3>
 
-> 💕 **External config** - This method is powered by [**fast-glob** library](https://github.com/mrmlnc/fast-globy), `fastGlob.Options` will be provided to this library so check documentation of this library for more informations
+If any directory in tree does not exists then they will be created - otherwise nothing will be created
 
 ```typescript
-glob(
-    target: string | string[],
-    opts?: fastGlob.Options,
+createDir(
+    path: string,
+    mode?: number // e.g 0o776
+): Promise<true>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+$.task('maybe-create-dir', async () => {
+    const res = await $.rescue(
+        $.fs.createDir('test/test/test'),
+        false
+    );
+
+    if (res) {
+        // dir is prepared
+    } else {
+        // dir isn't prepared for some reason
+    }
+});
+
+$.task('swallow-create-dir', async () => {
+    await $.rescue($.fs.createDir('test/test/test'));
+    // nobody cares if dir exists
+});
+
+$.task('force-create-dir', async () => {
+    await $.fs.createDir('file.txt', 'second-file.txt');
+    // unreachable without successful dir creating or check if exists
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--createtempdir"><code>fs.createTempDir()</code></h3>
+
+Creates dir in temporary directory of your operating system, those directories are often cleared
+
+```typescript
+createTempDir(): Promise<string>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+$.task('temp-dir', async () => {
+    const dir = await $.fs.createTempDir();
+    // "dir" variable contains temporary directory path
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--edit"><code>fs.edit()</code></h3>
+
+Allows seamlessly edit content of file
+
+```typescript
+edit(
+    path: string,
+    fn: (data: string) => (Promise<string> | string)
+): Promise<void>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+$.task('edit-file', async () => {
+    await $.fs.edit(
+        'test.txt',
+        data => data.replace('$$', 'USD')
+    );
+    // file has been edited
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--exists"><code>fs.exists()</code></h3>
+
+Check if given path exists and if so, returns type of given path
+
+```typescript
+exists(path: string): Promise<false | 'file' | 'dir'>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+$.task('check-path', async () => {
+    const type = await $.fs.exists('test');
+
+    switch (type) {
+        case false:
+            // does not exists
+            break;
+
+        case 'file':
+            // path is file
+            break;
+
+        case 'dir':
+            // path is directory
+            break;
+    }
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--hash"><code>fs.hash()</code></h3>
+
+Hash given file
+
+```typescript
+hash(
+    file: string,
+    algorithm: 'md5' | 'sha1' | 'sha256' | 'sha512' = 'md5',
+    encoding: 'hex' | 'base64' | 'buffer' | 'latin1' = 'base64'
+): Promise<string>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```javascript
+const $ = new Bunbun;
+
+$.fs.hash('test.txt').then(hash => console.log(hash));
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--list"><code>fs.list()</code></h3>
+
+Returns list of files matching given pattern
+
+```typescript
+type ListOptions = {
+    absolute: boolean = false,
+    cwd: string = fs.cwd,
+    onlyDirectories: boolean = false,
+    onlyFiles: boolean = false,
+};
+
+exists(
+    pattern: string | string[],
+    options: Partial<ListOptions> = {}
 ): Promise<string[]>;
 ```
 
 <details>
   <summary>📚 Click to expand the sample code</summary>
 
-If we want to get all filenames of such images:
+```typescript
+const $ = new Bunbun();
 
-```
-.
-└── src/
-    ├── images/
-    │   ├── a.png
-    │   └── b.jpg
-    ├── other/
-    │   └── c.jpeg
-    ├── d.png
-    └── logo.png
-```
+$.task('assets-files', async () => {
+    const images = await $.fs.list([
+        './src/**/*.(png|jpg)',
+        '!./src/**/*.raw.png'
+    ]);
 
-We can do it in such way:
-
-```javascript
-const $ = new Bunbun;
-
-$.task('list-assets', async () => {
-    const files = await $.glob(['./src/**/*.{png,jpg,jpeg}','!./src/logo.png']);
-
-    /*
-        files = [
-            'src/images/a.png',
-            'src/images/b.png',
-            'src/other/c.jpeg',
-            'src/d.png',
-        ];
-    */
+    // images is array of matching paths
 });
 ```
 </details>
 
-### » watch
+<!------------------------------------------------------------------------------------------------------------->
 
-Watch all changes on files using glob pattern
+<h3 id="class-fs--read"><code>fs.read()</code></h3>
 
-> 💕 **External config** - This method is powered by [**chokidar** library](https://github.com/paulmillr/chokidar), `chokidar.WatchOptions` will be provided to this library so check documentation of this library for more informations
+Reads content of file as string
 
-> ✨ **Tip** - Watch will inform about every changed file, so if you change more than one file you will get multiple messages, if you want avoid spam of execution just use [debounce](#-debounce) method
+```typescript
+read(path: string): Promise<string>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+$.task('read-files', async () => {
+    const text = await $.fs.read('package.json');
+    // text is package.json content
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--remove"><code>fs.remove()</code></h3>
+
+Removes given file or dir
+
+```typescript
+remove(path: string): Promise<true>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+$.task('remove-file', async () => {
+    const text = await $.fs.remove('package.json');
+    // package.json is removed here
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--remove"><code>fs.rename()</code></h3>
+
+Renames given file or dir
+
+```typescript
+rename(source: string, target: string): Promise<true>;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+$.task('rename-file', async () => {
+    await $.fs.rename('package.json', 'package.json.bak');
+    // package.json is renamed here
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--watch"><code>fs.watch()</code></h3>
+
+Watches given files which matches given paths and returns disposer, every time any matching file has been changed, removed or added then given function will be executed, also after initial scanning function is executed once
 
 ```typescript
 watch(
-    target: string | string[],
-    fn: () => unknown,
-    opts?: chokidar.WatchOptions,
+    pattern: string | string[],
+    fn: () => any
+): () => void;
+```
+
+<details>
+  <summary>📚 Click to expand the sample code</summary>
+
+```typescript
+const $ = new Bunbun();
+
+$.fs.watch('./src/**/*.js', () => {
+    console.log('some file has been changed!');
+});
+```
+</details>
+
+<!------------------------------------------------------------------------------------------------------------->
+
+<h3 id="class-fs--write"><code>fs.write()</code></h3>
+
+Writes given content into file
+
+```typescript
+watch(
+    path: string,
+    data: string | Buffer
 ): void;
 ```
 
 <details>
   <summary>📚 Click to expand the sample code</summary>
 
-```javascript
-const $ = new Bunbun;
+```typescript
+const $ = new Bunbun();
 
-$.task('watch-assets', async () => {
-    $.watch(['./src/**/*.{png,jpg,jpeg}','!./src/logo.png'], () => {
-        // will be throwed EVERY time some file changed
-        console.log('some image has been changed/removed/added, except logo.png that has been ignored');
-    });
-
-    // Recommended usage, dependent on destiny:
-    // will be throwed EVERY time some file changed, but never will be fired multiple times
-    // at the same time
-    $.watch(['./src/**/*.{png,jpg,jpeg}','!./src/logo.png'], $.debounce(() => {
-        console.log('some image has been changed/removed/added, except logo.png that has been ignored');
-    }));
-
-    // or
-
-    $.watch(['./src/**/*.{png,jpg,jpeg}','!./src/logo.png'], () => {
-        $.run('debounce-task');
-    });
+$.fs.write('test.txt').then(() => {
+    console.log('DONE!');
 });
 ```
 </details>
 
-### » exists
+<!------------------------------------------------------------------------------------------------------------->
 
-Check if file or directory exists
+<h3 id="class-httpserver"><code>class HttpServer</code></h3>
 
-```typescript
-exists(path: string): Promise<false | 'dir' | 'file'>;
-```
-
-<details>
-  <summary>📚 Click to expand the sample code</summary>
-
-```javascript
-const $ = new Bunbun;
-
-$.task('check-assets', async () => {
-    if ((await $.exists('./src/logo')) === 'file') {
-        // logo exists and its file
-    }
-
-    if ((await $.exists('./src/logo')) === 'dir') {
-        // logo exists and its directory
-    }
-
-    if ((await $.exists('./src/logo')) === false) {
-        // logo does not exists
-    }
-
-    // or
-
-    switch (await $.exists('./src/logo')) {
-        case 'file':
-            // file!
-            break;
-
-        case 'dir':
-            // directory!
-            break;
-
-        default:
-            // nothing :c
-            break;
-    }
-});
-```
-</details>
-
-### » tempDir
-### » tempDirClean
-
-Create temporary directory and removes it after current task or manually
+Can be created via [`bunbun.serve()`](#class-bunbun--serve)
 
 ```typescript
-tempDir(
-    cleanOnFinish = true, // if false then directory will don't disappear after task
-): Promise<string>;
-
-// temp directory can be removed manually using this method in any moment
-tempDirClean(path: string): Promise<void>;
-```
-
-<details>
-  <summary>📚 Click to expand the sample code</summary>
-
-```javascript
-const $ = new Bunbun;
-
-$.task('temp-1', async () => {
-    const dir = await $.tempDir();
-    // dir exists
-    await $.wait(30 * 1000);
-
-    // dir will be removed after task
-});
-
-$.task('temp-2', async () => {
-    const dir = await $.tempDir(true);
-    // dir exists
-    await $.wait(30 * 1000);
-
-    // dir will be don't removed after task
-    await $.tempDirClean(dir);
-    // dir doesn't exists
-});
-```
-</details>
-
-### » debounce
-
-Avoid multiple fires of given function basing on returned promise
-
-```typescript
-debounce(fn: () => unknown | PromiseLike<unknown>): Promise<unknown>;
-```
-
-<details>
-  <summary>📚 Click to expand the sample code</summary>
-
-```javascript
-const $ = new Bunbun;
-
-$.task('debounce-task', $.debounce(async () => {
-    console.log('hello!');
-    await longTask();
-    console.log('bye!');
-}));
-
-// if we will fire this function manually multiple times, e.g:
-$.run('debounce-task'); // > Ok! task will be executed
-$.run('debounce-task'); // > Task will be executed after previous execution
-$.run('debounce-task'); // > Task already wait for re-run, so it's ignored
-$.run('debounce-task'); // > Task already wait for re-run, so it's ignored
-$.run('debounce-task'); // > Task already wait for re-run, so it's ignored
-$.run('debounce-task'); // > Task already wait for re-run, so it's ignored
-
-// function can be used everywhere
-const fn = $.debounce(async () => {
-    await longTask();
-    console.log('bye');
-})
-
-// if we will fire this function manually multiple times, e.g:
-fn(); // > Ok! task will be executed
-fn(); // > Task will be executed after previous execution
-fn(); // > Task already wait for re-run, so it's ignored
-
-```
-</details>
-
-### » serve
-
-Serve directory as HTTP server
-
-> ✨ **Tip** - Methods of returned **BunbunHttpServer** are listed with other methods in [methods](#methods) part of this file
-
-```typescript
-serve(
-    directory: string, // main dir of server
-    port: number, // port for hosting
-    options?: {
-        fallback?: string; // fallback file, default: index.html
-        reload?: boolean; // if server should be reloadable, default: true
-        reloadPort?: number; // port for reloading, default: 8181
-    },
-): BunbunHttpServer;
-```
-
-<details>
-  <summary>📚 Click to expand the sample code</summary>
-
-```javascript
-const $ = new Bunbun;
-
-$.task('serve', () => {
-    $.serve('./build', 8080);
-    // visit: http://localhost:8080/
-});
-```
-</details>
-
-### » exec
-### » tryExec
-
-Execute command in commandline
-
-```typescript
-type ExecOptions = {
-    cwd?: string; // default: current cwd
-    env?: { // list of enviroment values, default: current env
-        [name: string]: string;
-    };
-    timeout?: number; // default: 0
-    maxBuffer?: number; // default: 1024 * 1024
+type HttpServer = {
+    new();
+    // ...
 };
-
-exec(command: string, opts?: ExecOptions): Promise<{
-    stdout: Buffer;
-    stderr: Buffer;
-}>;
-// or
-tryExec(command: string, opts?: ExecOptions): Promise<{
-    stdout: Buffer;
-    stderr: Buffer;
-}>;
 ```
 
 <details>
   <summary>📚 Click to expand the sample code</summary>
-
-```javascript
-const $ = new Bunbun;
-
-$.task('exec', async () => {
-    const { stdout, stderr } = await $.exec('echo test');
-    // if error (NOT stderr data) will be throwed, then you can't reach this position
-    console.log(stdout, stderr);
-});
-
-$.task('try-exec', () => {
-    const { stdout, stderr } = await $.tryExec('echo test');
-    // this place will be always reachable, at least stdout/stderr will be empty string
-    console.log(stdout, stderr);
-});
-
-```
-</details>
-
-### » wait
-
-Async timeout
 
 ```typescript
-wait(ms: number): Promise<void>;
-```
-
-<details>
-  <summary>📚 Click to expand the sample code</summary>
-
-```javascript
 const $ = new Bunbun;
 
-$.task('waiting', async () => {
-    await longAction();
-    await $.wait(3000);
-    // you reach this place after longAction + 3s of waiting
-    await nextLongAction();
-});
-
+const server = $.serve('build', 8080); // here you are
 ```
 </details>
 
-### » log
-### » error
+<!------------------------------------------------------------------------------------------------------------->
 
-Print colored message in console, all string and number variables will be colored
+<h3 id="class-httpserver--reload"><code>httpserver.reload()</code></h3>
 
-```typescript
-log(text: string, ...params: any[]);
-// or
-error(text: string, ...params: any[]);
-```
-
-<details>
-  <summary>📚 Click to expand the sample code</summary>
-
-```javascript
-const $ = new Bunbun;
-
-$.log('Hello, %s, %s', 'Bob', 10);
-$.error('Bye bye, %s, %s', 'Bob', 10);
-
-```
-</details>
-
-### » reload
-
-Reload openned pages of server if at [creating server](#-serve) options `reload` has been turned on
+Reloads all pages with injected reloading script if turned on at creating
 
 ```typescript
 reload(): void;
@@ -841,26 +1315,12 @@ reload(): void;
 <details>
   <summary>📚 Click to expand the sample code</summary>
 
-```javascript
+```typescript
 const $ = new Bunbun;
 
-$.task('serve', () => {
-    const server = $.serve('./build', 8080);
+const server = $.serve('build', 8080);
 
-    setInterval(() => {
-        // pages of server will be reloaded after every 1s
-        server.reload();
-    }, 1000);
-});
-
-$.task('watch', () => {
-    const server = $.serve('./build', 8080);
-
-    $.watch('./build/**/*', () => {
-        // pages of server will be reloaded after every change in files
-        server.reload();
-    });
-});
-
+// after some change you can ask for reload pages:
+server.reload();
 ```
 </details>

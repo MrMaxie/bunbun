@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "outDir": "dist",
     "target": "es6",
     "module": "CommonJS",
     "declaration": true,
@@ -11,5 +12,5 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "files": ["main.ts"]
+  "files": ["src/main.ts"]
 }
