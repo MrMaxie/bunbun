@@ -251,4 +251,10 @@ export default class Bunbun {
             return;
         }
     }
+
+    async wait(time: number): Promise<void> {
+        return new Promise(res => {
+            setTimeout(res, time);
+        });
+    }
 }
