@@ -46,36 +46,27 @@ npm install --save-exact --save-dev bunbun
 Example code:
 
 ```js
-const Bunbun = require('bunbun');
-
-// Import our tools to build things
 const { build } = require('esbuild');
 const nodeSass = require('node-sass');
+const Bunbun = require('./../dist/main.js');
 
-// Helper to make SASS async
 const sass = args => new Promise((res, rej) => {
     nodeSass.render(args, (err, data) => {
         err ? rej(err) : res(data);
     });
 });
 
-// Helper to prepare default settings of hash
 const hash = async file => {
-    const res = await $.hashFile(file, {
-        algorithm: 'md5',
-        encoding: 'base64',
-    });
+    const res = await $.fs.hash(file, 'md5', 'base64');
     return res.replace(/[^a-z0-9]/gi, '');
 };
 
-// Constant list of extensions of source files
 const SOURCE_EXTS = '(scss|ts|tsx|js|jsx|html)';
 
-// Preparing instance
 const $ = new Bunbun;
 
-// Task: to javascript building
 $.task('build:typescript', async () => {
+    await $.until('hash');
     await build({
         sourcemap: true,
         format: 'iife',
@@ -92,8 +83,8 @@ $.task('build:typescript', async () => {
     $.run('hash');
 });
 
-// Task: to css building
 $.task('build:scss', async () => {
+    await $.until('hash');
     const result = await sass({
         file: './src/index.scss',
         sourceMap: './index.css.map',
@@ -101,50 +92,45 @@ $.task('build:scss', async () => {
         outputStyle: 'compressed',
         sourceMapContents: true,
     });
-    await $.write('./build/index.css', result.css || '');
-    await $.write('./build/index.css.map', result.map || '');
+    await $.fs.write('./build/index.css', result.css || '');
+    await $.fs.write('./build/index.css.map', result.map || '');
     $.run('hash');
 });
 
-// Task: preparing HTML with including hashes to urls
-$.task('hash', $.debounce(async () => {
-    let html = await $.read('./src/index.html');
-    const jsHash = await hash('./build/index.js');
-    const cssHash = await hash('./build/index.css');
-    html = html
-        .replace('__JS_HASH__', jsHash)
-        .replace('__CSS_HASH__', cssHash);
-    await $.write('./build/index.html', html);
-}));
+$.task('hash', async () => {
+    await $.fs.edit('./src/index.html', async html => {
+        const jsHash = await hash('./build/index.js');
+        const cssHash = await hash('./build/index.css');
+        return html
+            .replace('__JS_HASH__', jsHash)
+            .replace('__CSS_HASH__', cssHash);
+    });
+});
 
-// Task: sync building using prepared tasks
-$.task('build', $.debounce(async () => {
-    await $.run('build:typescript');
-    await $.run('build:scss');
-}));
+$.alias('build', ['build:typescript', 'build:scss']);
 
-// Task: cloning non-source files into build directory
-$.task('assets', $.debounce(async () => {
-    await $.globCopy(`./src/**/*.!${SOURCE_EXTS}`, './build');
-}));
+$.task('assets', async () => {
+    let list = await $.fs.list(['./src/**/*.*', `!**/*.${SOURCE_EXTS}`]);
+    for (const x of list) {
+        await $.fs.copy(x, x.replace(/^\.\/src/, './build'));
+    }
+});
 
-// Task: serving directory, watching files for building
 $.task('watch', async () => {
     const server = $.serve('./build', 8080);
 
-    $.watch(`./src/**/*.${SOURCE_EXTS}`, async () => {
+    $.fs.watch(`./src/**/*.${SOURCE_EXTS}`, async () => {
         await $.run('build');
         server.reload();
     });
 
-    $.watch(`./src/**/*.!${SOURCE_EXTS}`, async () => {
+    $.fs.watch(`./src/**/*.!${SOURCE_EXTS}`, async () => {
         await $.run('assets');
         server.reload();
     });
 });
 
-// Run task from argument, or just "build" as default
-$.run(process.argv[2] || 'build');
+$.start('build');
 ```
 
 </details>
